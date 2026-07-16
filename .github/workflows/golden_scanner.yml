@@ -26,3 +26,4 @@ jobs:
 
       - name: Jalankan Golden Scanner
         run: python golden.py 
+        # trigger update
