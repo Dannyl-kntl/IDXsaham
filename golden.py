@@ -16,7 +16,7 @@ TOKEN = "8815512475:AAGdaw8FHq35iBo9XGbtoOH7zkk-UrdmWOE"
 CHAT_ID = "8467853860"
 # =================================
 
-# ========== DAFTAR SAHAM IDX (958 saham) ==========
+# ========== DAFTAR SAHAM IDX ==========
 LIST_SAHAM = [
 "AALI.JK","ABBA.JK","ABDA.JK","ABMM.JK","ACES.JK","ACST.JK","ADES.JK",
 "ADHI.JK","AISA.JK","AKKU.JK","AKPI.JK","AKRA.JK","AKSI.JK","ALDO.JK",
@@ -158,10 +158,7 @@ LIST_SAHAM = [
 "PNSE.JK","POLY.JK","POOL.JK","PPRO.JK"
 ]
 
-# ===========================================================
-
 def kirim_pesan(pesan):
-    """Kirim pesan ke Telegram dalam format HTML"""
     try:
         url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
         resp = requests.get(url, params={
@@ -177,19 +174,15 @@ def kirim_pesan(pesan):
         print(f"❌ Error kirim: {e}")
 
 def detect_support_resistance(df):
-    """Deteksi Support & Resistance dengan Donchian Channel 20 hari"""
     high = df['High']
     low = df['Low']
     close = df['Close']
-    
     resistance = high.rolling(20).max().iloc[-1]
     support = low.rolling(20).min().iloc[-1]
     current_close = close.iloc[-1]
-    
     is_breakout = current_close > resistance * 1.005
     is_support_bounce = current_close > support * 1.005
     breakout_strength = (current_close / resistance - 1) * 100 if is_breakout else 0
-    
     return {
         'resistance': resistance,
         'support': support,
@@ -199,18 +192,14 @@ def detect_support_resistance(df):
     }
 
 def detect_chart_pattern(df):
-    """Deteksi pola chart bullish (Flag, Triangle, Momentum)"""
     close = df['Close']
     high = df['High']
     low = df['Low']
-    
     recent_high = high.iloc[-10:].max()
     recent_low = low.iloc[-10:].min()
     range_width = (recent_high - recent_low) / recent_high * 100
-    
     lows_rising = low.iloc[-10:].is_monotonic_increasing
     highs_flat = (high.iloc[-10:].max() - high.iloc[-10:].min()) / high.iloc[-10:].mean() * 100 < 3
-    
     if range_width < 10 and close.iloc[-1] > close.iloc[-5]:
         return "🚩 Bullish Flag"
     elif lows_rising and highs_flat and close.iloc[-1] > high.iloc[-2]:
@@ -221,14 +210,12 @@ def detect_chart_pattern(df):
         return "⚪ Tidak terdeteksi"
 
 def scrape_sentimen(kode):
-    """Ambil sentimen berita dari Google News"""
     try:
         saham = yf.Ticker(kode)
         nama = saham.info.get('shortName', kode.replace('.JK', ''))
         search_url = f"https://news.google.com/search?q={nama.replace(' ', '+')}+saham"
         headers = {'User-Agent': 'Mozilla/5.0'}
         resp = requests.get(search_url, headers=headers, timeout=5)
-        
         if resp.status_code == 200:
             text = resp.text.lower()
             pos = ['naik', 'melesat', 'rekor', 'laba', 'dividen', 'ekspansi', 'akuisisi']
@@ -246,78 +233,51 @@ def scrape_sentimen(kode):
         return "📰 Gagal", 0
 
 def analisis_golden(kode, df):
-    """Analisis lengkap 1 saham"""
     try:
         if df.empty or len(df) < 30:
             return None
-        
         info = yf.Ticker(kode).info
         last = df.iloc[-1]
         prev = df.iloc[-2]
-        
-        # Indikator teknikal
         df['RSI'] = ta.rsi(df['Close'], length=14)
         df['MA20'] = ta.sma(df['Close'], length=20)
         df['MA50'] = ta.sma(df['Close'], length=50)
         df['ATR'] = ta.atr(df['High'], df['Low'], df['Close'], length=14)
-        
         harga = last['Close']
         atr = df['ATR'].iloc[-1]
         rsi = df['RSI'].iloc[-1]
         perubahan = ((harga - prev['Close']) / prev['Close']) * 100
-        
-        # Volume
         avg_vol_5 = df['Volume'].rolling(5).mean().iloc[-1]
         avg_vol_20 = df['Volume'].rolling(20).mean().iloc[-1]
         vol_hari = last['Volume']
         volume_spike = vol_hari / avg_vol_5 if avg_vol_5 > 0 else 0
         volume_bandar = vol_hari > avg_vol_20 * 2.0
-        
-        # SnR
         snr = detect_support_resistance(df)
-        
-        # Chart Pattern
         pattern = detect_chart_pattern(df)
-        
-        # Sentimen
         sentimen_label, sentimen_score = scrape_sentimen(kode)
-        
-        # === SKOR AKHIR (0-100) ===
         skor = 0
-        
-        # RSI (20%)
         if 50 <= rsi <= 70:
             skor += 20
         elif 40 <= rsi < 50 or 70 < rsi <= 80:
             skor += 10
-        
-        # SnR Breakout (25%)
         if snr['is_breakout']:
             skor += 25
         elif snr['is_support_bounce']:
             skor += 15
-        
-        # Volume Bandar (25%)
         if volume_bandar:
             skor += 25
         elif volume_spike > 1.5:
             skor += 15
-        
-        # Sentimen (15%)
         if sentimen_score > 0:
             skor += 15
         elif sentimen_score < 0:
             skor += 0
         else:
             skor += 7
-        
-        # Chart Pattern (15%)
         if 'Bullish' in pattern or 'Breakout' in pattern:
             skor += 15
         elif 'Konsolidasi' in pattern:
             skor += 10
-        
-        # === ENTRY, SL, TP ===
         if skor >= 70:
             entry = harga
             sl = round(harga - (1.5 * atr), 2)
@@ -329,7 +289,6 @@ def analisis_golden(kode, df):
             sl = tp1 = tp2 = None
             signal = "⏳ Tahan Diri"
             rekom = "Belum memenuhi kriteria"
-        
         return {
             'kode': kode.replace('.JK', ''),
             'nama': info.get('shortName', kode)[:25],
@@ -358,12 +317,12 @@ def analisis_golden(kode, df):
     except Exception as e:
         return None
 
-# ========== MAIN PROGRAM ==========
+# ========== MAIN ==========
 wita = pytz.timezone('Asia/Makassar')
 waktu_str = datetime.now(wita).strftime('%d-%m-%Y %H:%M')
 print(f"🚀 GOLDEN SCANNER (WITA) - {waktu_str}")
 
-# === PECAH LIST SAHAM MENJADI BATCH (Maks 90 per batch) ===
+# === BATCH DOWNLOAD ===
 def chunk_list(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
@@ -393,13 +352,11 @@ for batch in batches:
         print(f"✅ Batch {batch_count} selesai.")
     except Exception as e:
         print(f"❌ Batch {batch_count} gagal: {e}")
-    
-    # Jeda 2 detik antar batch agar aman dari blokir
     time.sleep(2)
 
 print(f"✅ Total berhasil di-download: {len(all_data)} saham")
 
-# === PROSES ANALISIS ===
+# === PROSES ===
 semua_hasil = []
 for kode in LIST_SAHAM:
     if kode not in all_data or all_data[kode].empty:
@@ -409,16 +366,13 @@ for kode in LIST_SAHAM:
     if res:
         semua_hasil.append(res)
 
-# Urutkan dari skor tertinggi
 semua_hasil.sort(key=lambda x: x['skor'], reverse=True)
-
-# Filter
 potensial = [h for h in semua_hasil if h['skor'] >= 70]
 pantauan = [h for h in semua_hasil if 50 <= h['skor'] < 70]
 
 print(f"✅ Berhasil menganalisis {len(semua_hasil)} saham.")
 
-# === SUSUN PESAN TELEGRAM ===
+# === PESAN TELEGRAM ===
 pesan = f"<b>🌟 GOLDEN SCANNER (WITA) - {waktu_str}</b>\n"
 pesan += f"📌 Total: {len(semua_hasil)} saham | 🔥 Potensial: {len(potensial)}\n"
 pesan += "=" * 30 + "\n\n"
@@ -434,4 +388,15 @@ if potensial:
         pesan += f"📈 Pattern: {h['pattern']}\n"
         pesan += f"{h['sentimen']}\n"
         pesan += f"💡 <b>Strategi:</b> {h['rekom']}\n"
-        pesan += f"🔴 <b>SL:</b> Rp{h['sl']:.0f} | 🟢 <b>TP1:</b> Rp{h['tp1']:.0f} | 🟢 <b>TP2:</b> Rp{h['tp2']:.0
+        pesan += f"🔴 <b>SL:</b> Rp{h['sl']:.0f} | 🟢 <b>TP1:</b> Rp{h['tp1']:.0f} | 🟢 <b>TP2:</b> Rp{h['tp2']:.0f}\n"
+        pesan += "-" * 25 + "\n"
+else:
+    pesan += "⏳ Belum ada saham dengan skor ≥ 70 hari ini.\n\n"
+
+if pantauan:
+    pesan += "<b>📊 PANTAUAN (Skor 50-69)</b>\n"
+    for h in pantauan[:5]:
+        pesan += f"🔹 {h['kode']} | Skor: {h['skor']} | RSI: {h['rsi']} | Rp{h['harga']:.0f}\n"
+
+kirim_pesan(pesan)
+print("✅ Selesai! Cek Telegram.")
