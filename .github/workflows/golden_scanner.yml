@@ -1,0 +1,28 @@
+name: Golden Scanner - Screening Saham Potensial
+
+on:
+  schedule:
+    # 🕒 JADWAL OTOMATIS (WITA / UTC+8)
+    - cron: '0 22 * * 0-4'   # 06:00 WITA (Pagi, cek gap up sebelum market buka)
+    - cron: '30 7 * * 1-5'   # 15:30 WITA (Sore, screening Buy setelah market tutup)
+  workflow_dispatch:          # Tombol untuk menjalankan MANUAL (tes)
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Library
+        run: |
+          python -m pip install --upgrade pip
+          pip install yfinance pandas-ta requests pytz
+
+      - name: Jalankan Golden Scanner
+        run: python golden_scanner.py 
