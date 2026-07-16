@@ -25,4 +25,4 @@ jobs:
           pip install yfinance pandas-ta requests pytz
 
       - name: Jalankan Golden Scanner
-        run: python golden_scanner.py 
+        run: python golden.py 
