@@ -340,7 +340,7 @@ for batch in batches:
     try:
         data = yf.download(
             tickers=batch,
-            period="60d",
+            period="120d",
             group_by='ticker',
             threads=False,
             progress=False,
