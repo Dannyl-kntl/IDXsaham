@@ -13,7 +13,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # ========== KONFIGURASI ==========
-TOKEN = "8995282419:AAHGtJIb3oeJHtf0LmmeSIpMNpNwjXv1ZK4"   # Ganti dengan token baru dari @BotFather
+TOKEN = "8815512475:AAGa6k3GHqoWisqiPWaD1MUR0dD75h4_hdU"   # Ganti dengan token baru dari @BotFather
 CHAT_ID = "8467853860"      # ID Telegram kamu
 # =================================
 
