@@ -1,11 +1,10 @@
-name: Golden Scanner - Screening Saham Potensial
+name: Super Scanner - Teknikal + Money Flow
 
 on:
   schedule:
-    # 🕒 JADWAL OTOMATIS (WITA / UTC+8)
-    - cron: '0 22 * * 0-4'   # 06:00 WITA (Pagi, cek gap up sebelum market buka)
-    - cron: '30 7 * * 1-5'   # 15:30 WITA (Sore, screening Buy setelah market tutup)
-  workflow_dispatch:          # Tombol untuk menjalankan MANUAL (tes)
+    - cron: '0 22 * * 0-4'   # 06:00 WITA (Pagi, cek gap up)
+    - cron: '30 8 * * 1-5'   # 16:30 WITA (Sore, screening utama)
+  workflow_dispatch:          # Tombol manual untuk testing
 
 jobs:
   scan:
@@ -24,6 +23,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install yfinance pandas-ta requests pytz
 
-      - name: Jalankan Golden Scanner
-        run: python golden.py 
-        # trigger update
+      - name: Jalankan Super Scanner
+        run: python super_scanner.py
