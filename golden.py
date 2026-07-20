@@ -1,6 +1,8 @@
 # ===== SUPER SCREENER (TEKNIKAL + MONEY FLOW) - FINAL FIX =====
 # Perbaikan: MA50 fallback, Breakout logic, RSI overbought penalty
+# Token diambil dari GitHub Secrets (AMAN)
 
+import os
 import yfinance as yf
 import pandas as pd
 import pandas_ta as ta
@@ -12,10 +14,16 @@ import random
 import warnings
 warnings.filterwarnings('ignore')
 
-# ========== KONFIGURASI ==========
-TOKEN = "8815512475:AAGa6k3GHqoWisqiPWaD1MUR0dD75h4_hdU"   # Ganti dengan token baru dari @BotFather
-CHAT_ID = "8467853860"      # ID Telegram kamu
-# =================================
+# ========== AMBIL TOKEN & CHAT ID DARI SECRETS ==========
+TOKEN = os.getenv('8815512475:AAGa6k3GHqoWisqiPWaD1MUR0dD75h4_hdU')
+CHAT_ID = os.getenv('8467853860')
+
+if not TOKEN or not CHAT_ID:
+    print("❌ ERROR: TELEGRAM_TOKEN atau TELEGRAM_CHAT_ID belum diset di Secrets!")
+    print("📌 Langkah: Settings → Secrets and variables → Actions → New repository secret")
+    exit(1)
+
+print("✅ Token dan Chat ID berhasil dimuat dari Secrets.")
 
 # ========== LIST SAHAM LENGKAP (900+ IDX) ==========
 LIST_SAHAM = [
@@ -25,28 +33,44 @@ LIST_SAHAM = [
 # ===========================================================
 
 def kirim_pesan(pesan):
+    """Kirim pesan ke Telegram dengan fallback jika HTML gagal"""
     try:
         url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+        
+        # Pertama coba dengan HTML
         resp = requests.get(url, params={
             'chat_id': CHAT_ID,
             'text': pesan,
             'parse_mode': 'HTML'
         }, timeout=30)
+        
         if resp.status_code == 200:
-            print("✅ Pesan terkirim!")
-        else:
-            print(f"❌ Gagal: {resp.status_code}")
+            print("✅ Pesan terkirim (mode HTML)!")
+            return True
+        
+        # Jika HTML gagal (error 400 karena karakter khusus)
+        if resp.status_code == 400:
+            print("⚠️ Mode HTML ditolak, kirim ulang tanpa format...")
+            resp2 = requests.get(url, params={
+                'chat_id': CHAT_ID,
+                'text': pesan
+            }, timeout=30)
+            if resp2.status_code == 200:
+                print("✅ Pesan terkirim (mode plain text)!")
+                return True
+        
+        print(f"❌ Gagal kirim: {resp.status_code}")
+        return False
     except Exception as e:
         print(f"❌ Error kirim: {e}")
+        return False
 
 def detect_support_resistance(df):
     high = df['High']; low = df['Low']; close = df['Close']
     resistance = high.rolling(20).max().iloc[-1]
     support = low.rolling(20).min().iloc[-1]
     current_close = close.iloc[-1]
-    # Breakout jika harga di atas resistance (dengan buffer 0.5%)
     is_breakout = current_close > resistance * 1.005
-    # Jika resistance == current_close (saham all-time high), anggap breakout
     if not is_breakout and current_close >= resistance:
         is_breakout = True
         breakout_strength = (current_close / support - 1) * 100
@@ -67,12 +91,12 @@ def detect_chart_pattern(df):
     lows_rising = low.iloc[-10:].is_monotonic_increasing
     highs_flat = (high.iloc[-10:].max() - high.iloc[-10:].min()) / high.iloc[-10:].mean() * 100 < 3 if high.iloc[-10:].mean() > 0 else False
     if range_width < 10 and close.iloc[-1] > close.iloc[-5]:
-        return "🚩 Bullish Flag"
+        return "Bullish Flag"
     elif lows_rising and highs_flat and close.iloc[-1] > high.iloc[-2]:
-        return "📐 Ascending Triangle"
+        return "Ascending Triangle"
     elif close.iloc[-1] > close.iloc[-5] * 1.05 and high.iloc[-1] > high.iloc[-2]:
-        return "📈 Momentum Breakout"
-    return "⚪ Tidak terdeteksi"
+        return "Momentum Breakout"
+    return "Tidak terdeteksi"
 
 def scrape_sentimen(kode):
     try:
@@ -88,14 +112,14 @@ def scrape_sentimen(kode):
             pos_count = sum(1 for kw in pos if kw in text)
             neg_count = sum(1 for kw in neg if kw in text)
             if pos_count > neg_count:
-                return "📰 Positif (Buy on Rumor)", pos_count - neg_count
+                return "Positif (Buy on Rumor)", pos_count - neg_count
             elif neg_count > pos_count:
-                return "📰 Negatif (Sell on News)", neg_count - pos_count
+                return "Negatif (Sell on News)", neg_count - pos_count
             else:
-                return "📰 Netral", 0
-        return "📰 Tidak ada berita", 0
+                return "Netral", 0
+        return "Tidak ada berita", 0
     except:
-        return "📰 Gagal", 0
+        return "Gagal", 0
 
 def analisis_super(kode, df):
     try:
@@ -106,7 +130,6 @@ def analisis_super(kode, df):
         last = df.iloc[-1]
         prev = df.iloc[-2]
         
-        # Indikator Teknikal
         df['RSI'] = ta.rsi(df['Close'], length=14)
         df['MA20'] = ta.sma(df['Close'], length=20)
         df['MA50'] = ta.sma(df['Close'], length=50)
@@ -130,7 +153,6 @@ def analisis_super(kode, df):
         pattern = detect_chart_pattern(df)
         sentimen_label, sentimen_score = scrape_sentimen(kode)
         
-        # Money Flow
         mf = ((df['Close'] - df['Low']) - (df['High'] - df['Close'])) / (df['High'] - df['Low'])
         mf = mf.fillna(0)
         cmf = mf.rolling(21).mean().iloc[-1]
@@ -138,14 +160,12 @@ def analisis_super(kode, df):
         adl = adl.cumsum()
         adl_trend = adl.iloc[-1] - adl.iloc[-21] if len(adl) >= 21 else 0
         
-        # MA50 display (jika NaN, tampilkan N/A)
         ma50_val = df['MA50'].iloc[-1]
         if pd.isna(ma50_val):
             ma50_display = "N/A (data < 50 hari)"
         else:
             ma50_display = f"Rp{ma50_val:.0f}"
         
-        # === SKOR TEKNIKAL (0-50) ===
         skor_teknikal = 0
         if harga > df['MA20'].iloc[-1]:
             skor_teknikal += 10
@@ -155,20 +175,17 @@ def analisis_super(kode, df):
             skor_teknikal += 15
         elif volume_spike > 1.5:
             skor_teknikal += 8
-        # RSI: 50-70 = sehat, 70-75 = ok, >75 = overbought (kurangi skor)
         if 50 <= rsi <= 70:
             skor_teknikal += 10
         elif 70 < rsi <= 75:
             skor_teknikal += 7
         elif 40 <= rsi < 50:
             skor_teknikal += 5
-        # MACD bullish
         if df['MACD'].iloc[-1] > df['MACD_signal'].iloc[-1]:
             skor_teknikal += 5
         if perubahan > 0:
             skor_teknikal += 5
         
-        # === SKOR MONEY FLOW (0-50) ===
         skor_money = 0
         if cmf > 0.1:
             skor_money += 25
@@ -189,17 +206,15 @@ def analisis_super(kode, df):
         if skor_total < 0:
             skor_total = 0
         
-        # Money status
         if cmf > 0.1 and adl_trend > 0:
-            money_status = "🔥 Smart Money + (Akumulasi Kuat)"
+            money_status = "Smart Money + (Akumulasi Kuat)"
         elif cmf > 0 and adl_trend > 0:
-            money_status = "🟢 Smart Money + (Akumulasi)"
+            money_status = "Smart Money + (Akumulasi)"
         elif cmf < -0.1 and adl_trend < 0:
-            money_status = "🔴 Smart Money - (Distribusi)"
+            money_status = "Smart Money - (Distribusi)"
         else:
-            money_status = "⚪ Netral"
+            money_status = "Netral"
         
-        # Entry, SL, TP
         if skor_total >= 70:
             entry = harga
             sl = round(harga - (1.5 * atr), 2)
@@ -249,9 +264,8 @@ def analisis_super(kode, df):
 # ========== MAIN ==========
 wita = pytz.timezone('Asia/Makassar')
 waktu_str = datetime.now(wita).strftime('%d-%m-%Y %H:%M')
-print(f"🚀 SUPER SCREENER (TEKNIKAL + MONEY FLOW) - {waktu_str}")
+print(f"🚀 SUPER SCREENER - {waktu_str}")
 
-# === BATCH DOWNLOAD (BATCH KECIL + JEDA ACAK) ===
 def chunk_list(lst, n):
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
@@ -273,13 +287,4 @@ for batch in batches:
             group_by='ticker',
             threads=False,
             progress=False,
-            auto_adjust=False
-        )
-        for ticker in batch:
-            if ticker in data and not data[ticker].empty:
-                all_data[ticker] = data[ticker]
-        print(f"✅ Batch {batch_count} selesai.")
-    except Exception as e:
-        print(f"❌ Batch {batch_count} gagal: {e}")
     
-    # Jeda acak 3-6 detik agar tida
