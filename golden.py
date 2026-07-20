@@ -15,7 +15,7 @@ import signal
 warnings.filterwarnings('ignore')
 
 # ========== KONFIGURASI ==========
-TOKEN = "8815512475:AAGa6k3GHqoWisqiPWaD1MUR0dD75h4_hdU"
+TOKEN = "8815512475:AAF5sgr0ikoFCVB_CkNUBZ8tSc41aMzTJ2I"
 CHAT_ID = "8467853860"
 # =================================
 
