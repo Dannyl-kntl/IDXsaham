@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ==================== TELEGRAM ====================
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+TELEGRAM_TOKEN = os.getenv("8815512475:AAHvM8KvHEyeuTnd9iw224h0nG8QlTpVGwg")
+TELEGRAM_CHAT_ID = os.getenv("8467853860")
 
 # ==================== SCREENING PARAMS ====================
 BATCH_SIZE = 50
