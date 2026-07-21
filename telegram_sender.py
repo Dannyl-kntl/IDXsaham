@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 class TelegramSender:
     def __init__(self):
-        self.bot = Bot(token=TELEGRAM_TOKEN) if TELEGRAM_TOKEN else None
-        self.chat_id = TELEGRAM_CHAT_ID
+        self.bot = Bot(token=8815512475:AAHvM8KvHEyeuTnd9iw224h0nG8QlTpVGwg) if TELEGRAM_TOKEN else None
+        self.chat_id = 8467853860
 
     def _format_message(self, results: List[Dict], session: str) -> str:
         if not results:
