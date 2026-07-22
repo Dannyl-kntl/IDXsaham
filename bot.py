@@ -177,6 +177,8 @@ async def scheduled_scrape(context):
         logger.warning("Weekly update failed, keeping static list.")
 
 # ------------------- MAIN -------------------
+# ... (kode di atas tetap sama) ...
+
 def main():
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         logger.error("Missing TELEGRAM_TOKEN or CHAT_ID in .env")
@@ -191,21 +193,20 @@ def main():
     
     # Jobs
     job_queue = app.job_queue
-    # Daily 15:30 WITA
     job_queue.run_daily(
         scheduled_screening,
         time=time(hour=15, minute=30, tzinfo=WITA),
         name="daily_screen"
     )
-    # Weekly Sunday 23:00 WITA (update list)
     job_queue.run_daily(
         scheduled_scrape,
         time=time(hour=23, minute=0, tzinfo=WITA),
-        days=(6,),  # Sunday = 6 (Monday=0)
+        days=(6,),
         name="weekly_scrape"
     )
     
-    logger.info("🚀 Bot started. Daily scan at 15:30 WITA. Weekly scrape Sunday 23:00 WITA.")
+    logger.info("🚀 Bot started. Daily scan at 15:30 WITA.")
+    # Mulai polling (ini yang membuat bot tetap jalan)
     app.run_polling()
 
 if __name__ == "__main__":
