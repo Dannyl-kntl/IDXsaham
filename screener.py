@@ -20,7 +20,7 @@ class StockScreener:
             try:
                 data = self.fetcher.get_stock_info(ticker)
                 if not data:
-                    time.sleep(1)
+                    time.sleep(2)
                     continue
                 
                 score = self._calculate_score(data)
@@ -28,7 +28,7 @@ class StockScreener:
                     data["score"] = score
                     self.results.append(data)
                 
-                time.sleep(1)
+                time.sleep(2)
                 
             except Exception as e:
                 print(f"⚠️ Error pada {ticker}: {e}")
