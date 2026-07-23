@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Telegram Bot
-BOT_TOKEN = os.getenv("8995282419:AAGf3G7YLLjhwk636BC9rAIgJ6s_ufU2Bp0")
+BOT_TOKEN = os.getenv("8995282419:AAGay2YEycci1GpEVlvCI1G4y25SONMhdnQ")
 
 # Data API (pilih salah satu)
 # Opsi 1: iTick (gratis, daftar di https://itick.org)
