@@ -8,7 +8,7 @@ BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 
 # Data API (pilih salah satu)
 # Opsi 1: iTick (gratis, daftar di https://itick.org)
-ITICK_API_KEY = os.getenv("c20a0711f786458cb33c849837b97d8738216f7741e14aef91a8d9cd09968251", "")
+ITICK_API_KEY = os.getenv("ITICK_API_KEY", "")
 ITICK_BASE_URL = "https://api.itick.org"
 
 # Opsi 2: Yahoo Finance (fallback, gratis tanpa API key)
