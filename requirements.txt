@@ -1,6 +1,6 @@
 python-telegram-bot==20.7
 requests==2.31.0
-yfinance==0.2.33
-pandas==2.1.4
+yfinance==0.2.38
+pandas==2.2.2
 python-dotenv==1.0.0
-numpy==1.26.2
+numpy==1.26.4
